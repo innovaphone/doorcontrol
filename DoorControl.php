@@ -19,6 +19,7 @@ class DoorPhones {
     var $doorfile = null;
     var $statefile = null;
     var $id = null;
+    var $device = null;
     var $knownDoors = null;
 
     /**
@@ -28,7 +29,7 @@ class DoorPhones {
      * @param string $id if not null, h323id (i.e. "Name") of PBX uiser requesting the door cam picture
      * @param string $device (optional) hardware device used for registration if not null
      */
-    function __construct($doors, $state, $id, $device = null) {
+    function __construct($doors, $state, $id = null, $device = null) {
         $this->doorfile = $doors;
         $this->statefile = $state;
         $this->id = $id;
@@ -66,6 +67,10 @@ class DoorPhones {
         }
     }
 
+    function setId($id) {
+        $this->id = $id;
+    }
+
     var $statefh = null;
 
     /**
@@ -97,19 +102,28 @@ class DoorPhones {
     }
 
     /**
-     * determine if i am called by a known door
-     * @return string name of door that calls me (or null if not)
+     * connect the PBX using configured credentials
+     * @return innoPBX
      */
-    function calledByADoor() {
-        // my own h323 (Name) given?
-        if ($this->id == null)
-            return null;
+    function connectPBX() {
         // contact PBX
-        $pbx = new innoPBX((string) $this->doors['pbx'], (string) $this->doors['pbxhttp'], (string) $this->doors['pbxpw'], (string) $this->doors['pbxuser']);
+        $pbx = new innoPBX((string) $this->doors['pbx'], (string) $this->doors['pbxhttp'], (string) $this->doors['pbxpw'], (string) $this->doors['pbxuser'], null, null, 10);
         if ($pbx->session() == 0) {
             unset($this->doors->door);
             die("doors.xml: cannot create PBX session with credentials found in " . htmlspecialchars($this->doors->asXML()));
         }
+        return $pbx;
+    }
+
+    /**
+     * determine if i am called by a known door
+     * @return string name of door that calls me (or null if not)
+     */
+    function calledByADoor($pbx, $returndoor = true, $switchapp = true) {
+        // my own h323 (Name) given?
+        $doorcalls = 0;
+        if ($this->id == null)
+            return null;
         // see if I am called by one of the known doors
         $calls = $pbx->Calls($pbx->session(), $this->id);
         foreach ($calls as $c) {
@@ -119,9 +133,11 @@ class DoorPhones {
                 if ($no->type == "peer") {
                     if (isset($this->knownDoors[$no->h323])) {
                         // and if it matches one of the doors, return the doors URL
-                        if (isset($this->doors['switch']) && ($this->doors['switch']) == "true")
-                            $this->switch2VideoApp($pbx, $c);
-                        return $this->knownDoors[$no->h323];
+                        if ($returndoor)
+                            return $this->knownDoors[$no->h323];
+                        if ($switchapp) {
+                            $doorcalls += $this->switch2VideoApp($pbx, $c);
+                        }
                     } else if (isset($_GET['debug'])) {
                         print "I ($this->id) have a call, peer is '$no->h323'<br>\n";
                     }
@@ -132,6 +148,9 @@ class DoorPhones {
             var_dump($this->id);
             var_dump($calls);
             exit;
+        }
+        if ($switchapp) {
+            return $doorcalls;
         }
         return null;
     }
@@ -145,6 +164,7 @@ class DoorPhones {
     }
 
     function switch2VideoApp(innoPBX $pbx, $doorcall) {
+        $calls = 0;
         $doorcallconf = $this->getConf($doorcall->info);
         $search = 10;
         $myid = 0;
@@ -159,7 +179,7 @@ class DoorPhones {
             $age = $t1 - $t0;
             if ($age > 2) {
                 // timeout may occur on a race condition where the call was terminated since it was detected with Calls()
-                // this will effectivekly stop switching the video picture for one minute :-(
+                // this will effectively stop switching the video picture for one minute :-(
                 break;
             }
             try {
@@ -172,12 +192,19 @@ class DoorPhones {
             foreach ($pr->call as $call) {
                 if ($call->user == $myid && $this->getConf($call->info) == $doorcallconf) {
                     $pbx->UserRc($call->call, 36);
+                    $calls++;
                     header("X-inno-userrc: switched call #$call->call for $this->id to video app", false);
                     $search = false;
-                    break;
+                    // break;  allow more than one call to the operator (multireg)
                 }
             }
         }
+        return $calls;
+    }
+
+    function switchapps() {
+        $pbx = $this->connectPBX();
+        return $this->calledByADoor($pbx, false, true);
     }
 
     /**
@@ -197,8 +224,10 @@ class DoorPhones {
          * we walk through our list of cameras every <interval> seconds
          */
 
+        $pbx = $this->connectPBX();
+
         // see if requestor is talking to a door currenlty - if so, show this door always
-        if (($mydoor = $this->calledByADoor()) !== null) {
+        if (($mydoor = $this->calledByADoor($pbx)) !== null) {
             if (isset($_GET['debug'])) {
                 die("I am called by a door - so show $mydoor");
             }
@@ -364,7 +393,43 @@ if ($xmlfile === null)
     die("door definition file (doors.xml) does not exist in $dir");
 
 /*
- * create door control
+ * switch2app request?
+ */
+if (!empty($_GET['switchapp'])) {
+    $scriptresult = "";
+    if (!isset($_GET['h323'])) {
+        $scriptresult = "must have h323 arg for switchapp operation";
+    } elseif (empty($_GET['h323'])) {
+        $scriptresult = "works for diverted calls only";
+    } else {
+        $h323 = $_GET['h323'];
+        $doors = new DoorPhones($xmlfile, "$dir/state.xml");
+        $pbx = $doors->connectPBX();
+        $cn = null;
+        $e164 = null;
+        $ui = $pbx->FindUser("true", "true", "true", "true", $cn, $h323, $e164, 1, false, true);
+        if ((count($ui) != 1) || $ui[0]->h323 != $h323) {
+            $scriptresult = "cannot find object with 'Name' = '$h323'";
+        } else {
+            $cn = $ui[0]->cn;
+            $doors->setId($cn);
+            $ncalls = $doors->switchapps();
+            $scriptresult = "switched $ncalls call(s) for door '" . htmlentities($cn) . "'";
+        }
+    }
+    print "
+        <?xml version=\"1.0\" encoding=\"utf-8\"?>
+        <voicemail xmlns=\"http://www.innovaphone.com/xsd/vm.xsd\">
+            <function define=\"Main\">
+                <dbg string=\"switchops.xml: " . htmlentities($scriptresult) . "\"/>
+            </function>
+        </voicemail>
+        ";
+    exit;
+}
+
+/*
+ * door picture retrieval?
  */
 $doors = new DoorPhones($xmlfile, "$dir/state.xml", isset($_GET["id"]) ? $_GET["id"] : null, isset($_GET["hw"]) ? $_GET["hw"] : null);
 if (empty($_GET['proxy'])) {
@@ -372,3 +437,4 @@ if (empty($_GET['proxy'])) {
 } else {
     $doors->proxy($_GET['proxy']);
 }
+    
