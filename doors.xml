@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doors 
+    pbx="145.253.157.200"
+    pbxhttp="_TAPI_"
+    pbxpw="soap"
+    pbxuser="_TAPI_"
+    interval="5"
+>
+    <door 
+        url="http://baudisch.dyndns.org/jpg/image.jpg" 
+        name="door1"/>
+    <door 
+        url="http://216.123.238.208/axis-cgi/jpg/image.cgi" 
+        name="door2"/>
+    <door
+        url="http://rax1.bsn.net/axis-cgi/jpg/image.cgi"
+        name="door3"/>
+</doors>
