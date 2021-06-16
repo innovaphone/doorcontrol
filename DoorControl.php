@@ -185,6 +185,10 @@ class DoorPhones {
         if (!$usersession->connect($this->device)) {
             die("cannot create user session for $this->id($this->device)");
         }
+
+        // get new pbx if connect() was redirected to slave
+        $used_pbx = $usersession->pbx();
+
         $myid = $usersession->session();
         while ($search) {
             $t1 = time();
@@ -195,7 +199,7 @@ class DoorPhones {
                 break;
             }
             try {
-                $pr = $pbx->Poll($pbx->session());
+                $pr = $used_pbx->Poll($used_pbx->session());
             } catch (Exception $e) {
                 $pr = new stdClass();
                 $pr->call = array();
@@ -203,7 +207,7 @@ class DoorPhones {
             }
             foreach ($pr->call as $call) {
                 if ($call->user == $myid && $this->getConf($call->info) == $doorcallconf) {
-                    $pbx->UserRc($call->call, 36);
+                    $used_pbx->UserRc($call->call, 36);
                     $calls++;
                     header("X-inno-userrc: switched call #$call->call for $this->id to video app", false);
                     $search = false;
