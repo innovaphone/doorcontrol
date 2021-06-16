@@ -26,11 +26,13 @@ class DoorPhones {
      * @param string $doors name of file with door definitions
      * @param string $state name of file with state memory
      * @param string $id if not null, h323id (i.e. "Name") of PBX uiser requesting the door cam picture
+     * @param string $device (optional) hardware device used for registration if not null
      */
-    function __construct($doors, $state, $id) {
+    function __construct($doors, $state, $id, $device = null) {
         $this->doorfile = $doors;
         $this->statefile = $state;
         $this->id = $id;
+        $this->device = $device;
 
         // load the door definitions
         if (($this->doors = simplexml_load_file($doors)) === false)
@@ -118,7 +120,7 @@ class DoorPhones {
                     if (isset($this->knownDoors[$no->h323])) {
                         // and if it matches one of the doors, return the doors URL
                         if (isset($this->doors['switch']) && ($this->doors['switch']) == "true")
-                                $this->switch2VideoApp($pbx, $c);
+                            $this->switch2VideoApp($pbx, $c);
                         return $this->knownDoors[$no->h323];
                     } else if (isset($_GET['debug'])) {
                         print "I ($this->id) have a call, peer is '$no->h323'<br>\n";
@@ -148,8 +150,8 @@ class DoorPhones {
         $myid = 0;
         $t0 = time();
         $usersession = $pbx->createUserSession($this->id);
-        if (!$usersession->connect()) {
-            die("cannot create user session for $this->id");
+        if (!$usersession->connect($this->device)) {
+            die("cannot create user session for $this->id($this->device)");
         }
         $myid = $usersession->session();
         while ($search) {
@@ -351,14 +353,20 @@ if (!is_dir($dir)) {
     die("your server delivers wrong directory ($dir) for \$_SERVER['SCRIPT_FILENAME']");
 }
 // check definition file
-if (!is_file("$dir/doors.xml") || !is_readable("$dir/doors.xml")) {
-    die("door definition file (doors.xml) does not exist in $dir");
+$xmlfile = null;
+foreach (array("$dir/dvl-doors.xml", "$dir/doors.xml") as $try) {
+    if (is_file($try) && is_readable($try)) {
+        $xmlfile = $try;
+        break;
+    }
 }
+if ($xmlfile === null)
+    die("door definition file (doors.xml) does not exist in $dir");
 
 /*
  * create door control
  */
-$doors = new DoorPhones("$dir/doors.xml", "$dir/state.xml", isset($_GET["id"]) ? $_GET["id"] : null);
+$doors = new DoorPhones($xmlfile, "$dir/state.xml", isset($_GET["id"]) ? $_GET["id"] : null, isset($_GET["hw"]) ? $_GET["hw"] : null);
 if (empty($_GET['proxy'])) {
     $doors->get();
 } else {
