@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<doors 
+<doors
     pbx="145.253.157.200"
     pbxhttp="_TAPI_"
     pbxpw="soap"
     pbxuser="_TAPI_"
     interval="5"
+    switch="true"
 >
     <door
         url="http://rax1.bsn.net/axis-cgi/jpg/image.cgi"

@@ -117,6 +117,8 @@ class DoorPhones {
                 if ($no->type == "peer") {
                     if (isset($this->knownDoors[$no->h323])) {
                         // and if it matches one of the doors, return the doors URL
+                        if (isset($this->doors['switch']) && ($this->doors['switch']) == "true")
+                                $this->switch2VideoApp($pbx, $c);
                         return $this->knownDoors[$no->h323];
                     } else if (isset($_GET['debug'])) {
                         print "I ($this->id) have a call, peer is '$no->h323'<br>\n";
@@ -124,7 +126,56 @@ class DoorPhones {
                 }
             }
         }
+        if (isset($_GET['debug'])) {
+            var_dump($this->id);
+            var_dump($calls);
+            exit;
+        }
         return null;
+    }
+
+    function getConf(array $info) {
+        foreach ($info as $val) {
+            if ($val->type == "conf")
+                return $val->vals;
+        }
+        return null;
+    }
+
+    function switch2VideoApp(innoPBX $pbx, $doorcall) {
+        $doorcallconf = $this->getConf($doorcall->info);
+        $search = 10;
+        $myid = 0;
+        $t0 = time();
+        $usersession = $pbx->createUserSession($this->id);
+        if (!$usersession->connect()) {
+            die("cannot create user session for $this->id");
+        }
+        $myid = $usersession->session();
+        while ($search) {
+            $t1 = time();
+            $age = $t1 - $t0;
+            if ($age > 2) {
+                // timeout may occur on a race condition where the call was terminated since it was detected with Calls()
+                // this will effectivekly stop switching the video picture for one minute :-(
+                break;
+            }
+            try {
+                $pr = $pbx->Poll($pbx->session());
+            } catch (Exception $e) {
+                $pr = new stdClass();
+                $pr->call = array();
+                $search = false;
+            }
+            foreach ($pr->call as $call) {
+                if ($call->user == $myid && $this->getConf($call->info) == $doorcallconf) {
+                    $pbx->UserRc($call->call, 36);
+                    header("X-inno-userrc: switched call #$call->call for $this->id to video app", false);
+                    $search = false;
+                    break;
+                }
+            }
+        }
     }
 
     /**
@@ -217,7 +268,7 @@ class DoorPhones {
             $me = $protocol .
                     ((empty($_SERVER['SERVER_NAME']) ? $_SERVER['SERVER_ADDR'] : $_SERVER['SERVER_NAME'])) .
                     ((empty($_SERVER['SERVER_PORT']) ? "" : ":{$_SERVER['SERVER_PORT']}"));
-                    $to = $me . $_SERVER['SCRIPT_NAME'] . "?proxy={$next['name']}";
+            $to = $me . $_SERVER['SCRIPT_NAME'] . "?proxy={$next['name']}";
             $this->warp($to);
         } else {
             $this->warp((string) $next['url']);
