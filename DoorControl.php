@@ -353,22 +353,19 @@ class DoorPhones {
             die("$id: this door is not configured for proxy viewing");
 
         $url = $door['url'];
-        $hdr = array();
         $copts = array(
-            CURLOPT_URL => $url
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            //CURLOPT_BINARYTRANSFER => true,
         );
 
-        // special content type?
-        if (!isset($door['content-type']))
-            $hdr[] = "Content-Type: image/jpeg";
-        else
-            $hdr[] = "Content-Type: {$door['content-type']}";
+        // ssl curl settings
+        if (isset($door['proxy-skip-ssl-verify']) && $door['proxy-skip-ssl-verify'] == 'true') $copts[CURLOPT_SSL_VERIFYPEER] = 0;
 
         // auth?
         if (isset($door['user']) && isset($door['pw'])) {
             $copts[CURLOPT_HTTPAUTH] = CURLAUTH_ANY;
             $copts[CURLOPT_USERPWD] = $door['user'] . ":" . $door['pw'];
-            $copts[CURLOPT_RETURNTRANSFER] = true;
             $copts[CURLOPT_FOLLOWLOCATION] = true;
         }
         $ch = curl_init();
@@ -379,6 +376,7 @@ class DoorPhones {
             // validate CURL status
             if (curl_errno($ch))
                 throw new Exception(curl_error($ch), 500);
+
             // validate HTTP status code (user/password credential issues)
             $status_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             if ($status_code != 200)
@@ -387,9 +385,88 @@ class DoorPhones {
             die("failed to retrieve $url for door '$id': " . $e->getMessage());
         }
 
-        foreach ($hdr as $h)
-            header($h);
-        print $image;
+        // resize picture
+        if (isset($door['proxy-resize']) && $door['proxy-resize'] == 'true') {
+            $phone_models = array(
+                'innovaphone-IP241' => array(320, 200),
+                'innovaphone-IP111' => array(320, 200),
+                'innovaphone-IP112' => array(320, 200),
+                'innovaphone-IP222' => array(320, 200),
+                'innovaphone-IP232' => array(480, 200),
+            );
+
+            $image = imagecreatefromstring($image);
+            if (!$image) die("$id: image cannot be converted");
+
+            $original_width = imagesx($image);
+            $original_height = imagesy($image);
+            if (isset($_GET['debug'])) echo ('orig: '.$original_width.' / '.$original_height.'<br />');
+
+            // check target phone screen size
+            $phone = explode('/', $_SERVER['HTTP_USER_AGENT']);
+            if (isset($phone[0]) && isset($phone_models[$phone[0]])) {
+                $target_width = $phone_models[$phone[0]][0];
+                $target_height = $phone_models[$phone[0]][1];
+            } else {
+                // unknown client use default from IP222
+                $target_width = 320;
+                $target_height = 200;
+            }
+            if (isset($_GET['debug'])) echo ('target: '.$target_width.' / '.$target_height.'<br />');
+
+            // calculate on base of width
+            if ($original_width > $target_width) {
+                $scale = $target_width/$original_width;
+                $scalled_height = ceil($original_height*$scale);
+                if (isset($_GET['debug'])) echo('calc width: ' . $target_width . ' / ' . $scalled_height . '<br />');
+
+                // calculate height
+                if ($scalled_height > $target_height) {
+                    $scale = $target_height/$scalled_height;
+                    $scalled_width = ceil($target_width*$scale);
+                    if (isset($_GET['debug'])) echo('calc height: ' . $scalled_width . ' / ' . $target_height . '<br />');
+                    $target_width = $scalled_width;
+                } else {
+                    $target_height = $scalled_height;
+                }
+
+            // calculate on base of height
+            } elseif ($original_height > $target_height) {
+                $scale = $target_height/$original_height;
+                $scalled_width = ceil($original_height*$scale);
+                if (isset($_GET['debug'])) echo('calc height: ' . $scalled_width . ' / ' . $target_height . '<br />');
+                $target_width = $scalled_width;
+
+                // recalulation for width would be skipped - no known szenario for ip cams
+                // ...
+
+            // dont resize picture - smaller then screen
+            } else {
+                $target_height = $original_height;
+                $target_width = $original_width;
+            }
+
+            // sampled version
+            $new_image = imagecreatetruecolor( $target_width, $target_height);
+            imagecopyresampled($new_image, $image,0,0,0,0, $target_width, $target_height, $original_width, $original_height);
+            if (isset($_GET['debug'])) echo ('new: '.imagesx($new_image).' / '.imagesy($new_image).'<br />');
+
+            // ouput
+            if (isset($_GET['debug'])) exit();
+            header('Content-Type: image/jpeg');
+            imagejpeg($new_image);
+
+
+        // output original picture
+        } else {
+            // use custom header if given
+            if (isset($door['content-type'])) {
+                header("Content-Type: ".$door['content-type']);
+            } else {
+                header("Content-Type: Content-Type: image/jpeg");
+            }
+            print $image;
+        }
     }
 
 }
