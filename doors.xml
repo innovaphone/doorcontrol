@@ -1,20 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <doors
-    pbx="145.253.157.200"
-    pbxhttp="_TAPI_"
-    pbxpw="soap"
+    pbx="1.2.3.4"
+    pbxhttp="demo"
+    pbxpw="demo"
     pbxuser="_TAPI_"
     interval="5"
     switch="true"
 >
-    <door
-        url="http://rax1.bsn.net/axis-cgi/jpg/image.cgi"
-        name="door"/>
-    <door
-        url="http://172.16.100.209/axis-cgi/jpg/image.cgi"
-        content-type="image/png"
-        proxy="true"
-        user="root"
-        pw="pwd"
-        name="behnke"/>
+    <door name="door" url="http://wiki.innovaphone.com/images/innoWiki.png"/>
+    <door name="behnke" url="https://www.innovaphone.com/content/images/innovaphone-slider-uc.png" content-type="image/png" proxy="true"/>
 </doors>

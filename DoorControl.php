@@ -326,7 +326,7 @@ class DoorPhones {
         $me = $protocol .
             ((empty($_SERVER['SERVER_NAME']) ? $_SERVER['SERVER_ADDR'] : $_SERVER['SERVER_NAME'])) .
             ((empty($_SERVER['SERVER_PORT']) ? "" : ":{$_SERVER['SERVER_PORT']}"));
-        return $me . $_SERVER['SCRIPT_NAME'] . "?proxy={$name}";
+        return $me . $_SERVER['SCRIPT_NAME'] . "?proxy=".urlencode($name);
     }
 
     /**

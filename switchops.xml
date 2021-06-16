@@ -20,7 +20,7 @@
         <dbg string="$leg2-name"/>
 
         <lib-enc out-string="$leg2-name-enc" string="$leg2-name" type="url"/>
-        <lib-strcat out-string="$url" string="http://172.16.100.202:8080/wiki-src/sample/DoorControl/sample/sources/DoorControl.php?switchapp=1&amp;h323=" string2="$leg2-name-enc"/>
+        <lib-strcat out-string="$url" string="http://1.2.3.4/doorcontrol/DoorControl.php?switchapp=1&amp;h323=" string2="$leg2-name-enc"/>
         <dbg string="$url"/>
         <!-- send switch to video app to phone -->
         <exec url="$url"/>
