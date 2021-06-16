@@ -6,13 +6,14 @@
     pbxuser="_TAPI_"
     interval="5"
 >
-    <door 
-        url="http://baudisch.dyndns.org/jpg/image.jpg" 
-        name="door1"/>
-    <door 
-        url="http://216.123.238.208/axis-cgi/jpg/image.cgi" 
-        name="door2"/>
     <door
         url="http://rax1.bsn.net/axis-cgi/jpg/image.cgi"
-        name="door3"/>
+        name="door"/>
+    <door
+        url="http://172.16.100.209/axis-cgi/jpg/image.cgi"
+        content-type="image/png"
+        proxy="true"
+        user="root"
+        pw="pwd"
+        name="behnke"/>
 </doors>

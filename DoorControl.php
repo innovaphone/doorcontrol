@@ -99,7 +99,7 @@ class DoorPhones {
      * @return string name of door that calls me (or null if not)
      */
     function calledByADoor() {
-        // my own h323 8Name) given?
+        // my own h323 (Name) given?
         if ($this->id == null)
             return null;
         // contact PBX
@@ -201,13 +201,90 @@ class DoorPhones {
         $this->unlock();
 
         if (isset($_GET['debug'])) {
+            var_dump($_SERVER);
             var_dump($this->doors);
             var_dump($this->state);
             var_dump($next);
             exit;
         }
         // show picture
-        $this->warp((string) $next['url']);
+        if (isset($next['proxy']) && $next['proxy'] == "true") {
+            $protocol = "http://";
+            if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') {
+                // client is using https
+                $protocol = "https://";
+            }
+            $me = $protocol .
+                    ((empty($_SERVER['SERVER_NAME']) ? $_SERVER['SERVER_ADDR'] : $_SERVER['SERVER_NAME'])) .
+                    ((empty($_SERVER['SERVER_PORT']) ? "" : ":{$_SERVER['SERVER_PORT']}"));
+                    $to = $me . $_SERVER['SCRIPT_NAME'] . "?proxy={$next['name']}";
+            $this->warp($to);
+        } else {
+            $this->warp((string) $next['url']);
+        }
+    }
+
+    /**
+     * retrieve a picture from a given door
+     * only used if proxy attribute is true in door
+     * @param int  $id name of door cam to get picture from
+     */
+    function proxy($id) {
+        $door = null;
+        $doors = array();
+        foreach ($this->doors->door as $key => $val) {
+            if (!empty($val['name']) && ($val['name'] == $id)) {
+                $door = $val;
+                break;
+            }
+            $doors[] = $val['name'];
+        }
+        // search door
+        if (!isset($door))
+            die("$id: not a valid door name (must be one of " . implode("|", $doors) . ")");
+        if (!isset($door['url']))
+            die("missing url attribute for door '$id'");
+        if (!isset($door['proxy']) || ($door['proxy'] != "true"))
+            die("$id: this door is not configured for proxy viewing");
+
+        $url = $door['url'];
+        $hdr = array();
+        $copts = array(
+            CURLOPT_URL => $url
+        );
+
+        // special content type?
+        if (!isset($door['content-type']))
+            $hdr[] = "Content-Type: image/jpeg";
+        else
+            $hdr[] = "Content-Type: {$door['content-type']}";
+
+        // auth?
+        if (isset($door['user']) && isset($door['pw'])) {
+            $copts[CURLOPT_HTTPAUTH] = CURLAUTH_ANY;
+            $copts[CURLOPT_USERPWD] = $door['user'] . ":" . $door['pw'];
+            $copts[CURLOPT_RETURNTRANSFER] = true;
+            $copts[CURLOPT_FOLLOWLOCATION] = true;
+        }
+        $ch = curl_init();
+        curl_setopt_array($ch, $copts);
+
+        try {
+            $image = curl_exec($ch);
+            // validate CURL status
+            if (curl_errno($ch))
+                throw new Exception(curl_error($ch), 500);
+            // validate HTTP status code (user/password credential issues)
+            $status_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            if ($status_code != 200)
+                throw new Exception("Response with Status Code [" . $status_code . "].", 500);
+        } catch (Exception $e) {
+            die("failed to retrieve $url for door '$id': " . $e->getMessage());
+        }
+
+        foreach ($hdr as $h)
+            header($h);
+        print $image;
     }
 
 }
@@ -231,4 +308,8 @@ if (!is_file("$dir/doors.xml") || !is_readable("$dir/doors.xml")) {
  * create door control
  */
 $doors = new DoorPhones("$dir/doors.xml", "$dir/state.xml", isset($_GET["id"]) ? $_GET["id"] : null);
-$doors->get();
+if (empty($_GET['proxy'])) {
+    $doors->get();
+} else {
+    $doors->proxy($_GET['proxy']);
+}
