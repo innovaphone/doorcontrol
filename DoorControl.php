@@ -145,11 +145,13 @@ class DoorPhones {
             }
         }
         if (isset($_GET['debug'])) {
+            echo '<pre>';
             var_dump($this->id);
             var_dump($calls);
+            echo '</pre>';
             exit;
         }
-        if ($switchapp) {
+        if ($switchapp && $doorcalls) {
             return $doorcalls;
         }
         return null;
@@ -283,10 +285,12 @@ class DoorPhones {
         $this->unlock();
 
         if (isset($_GET['debug'])) {
+            echo '<pre>';
             var_dump($_SERVER);
             var_dump($this->doors);
             var_dump($this->state);
             var_dump($next);
+            echo '</pre>';
             exit;
         }
         // show picture
