@@ -133,8 +133,18 @@ class DoorPhones {
                 if ($no->type == "peer") {
                     if (isset($this->knownDoors[$no->h323])) {
                         // and if it matches one of the doors, return the doors URL
-                        if ($returndoor)
-                            return $this->knownDoors[$no->h323];
+                        if ($returndoor) {
+                            // check if proxy must be used
+                            foreach ($this->doors as $door) {
+                                if ($door['name'] == $no->h323) {
+                                    if ($door['proxy'] == 'true') {
+                                        return $this->buildProxyURL($no->h323);
+                                    } else {
+                                        return $this->knownDoors[$no->h323];
+                                    }
+                                }
+                            }
+                        }
                         if ($switchapp) {
                             $doorcalls += $this->switch2VideoApp($pbx, $c);
                         }
@@ -295,19 +305,28 @@ class DoorPhones {
         }
         // show picture
         if (isset($next['proxy']) && $next['proxy'] == "true") {
-            $protocol = "http://";
-            if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') {
-                // client is using https
-                $protocol = "https://";
-            }
-            $me = $protocol .
-                    ((empty($_SERVER['SERVER_NAME']) ? $_SERVER['SERVER_ADDR'] : $_SERVER['SERVER_NAME'])) .
-                    ((empty($_SERVER['SERVER_PORT']) ? "" : ":{$_SERVER['SERVER_PORT']}"));
-            $to = $me . $_SERVER['SCRIPT_NAME'] . "?proxy={$next['name']}";
+            $to = $this->buildProxyURL($next['name']);
             $this->warp($to);
         } else {
             $this->warp((string) $next['url']);
         }
+    }
+
+    /**
+     * create URL to get image via proxy mode
+     * @param string $name name of door cam to get picture from
+     * @return URL for header redirect
+     */
+    function buildProxyURL($name) {
+        $protocol = "http://";
+        if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') {
+            // client is using https
+            $protocol = "https://";
+        }
+        $me = $protocol .
+            ((empty($_SERVER['SERVER_NAME']) ? $_SERVER['SERVER_ADDR'] : $_SERVER['SERVER_NAME'])) .
+            ((empty($_SERVER['SERVER_PORT']) ? "" : ":{$_SERVER['SERVER_PORT']}"));
+        return $me . $_SERVER['SCRIPT_NAME'] . "?proxy={$name}";
     }
 
     /**
