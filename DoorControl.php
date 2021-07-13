@@ -1,12 +1,12 @@
 <?php
 
 /*
- * this script will provide door pictrures from multiple door phones to operator phones
+ * this script will provide door pictures from multiple door phones to operator phones
  * 
- * it maintains a list of door phones with URL (to retrieve .jpg picture) and PBX (short)  Name (to monitor calls)
+ * it maintains a list of door phones with URL (to retrieve the .jpg picture) and PBX (short) Name (to monitor calls)
  * it requires SOAP-capable credentials on the PBX
  * 
- * the operaor phone would configure .../DoorContro.php?id=<my-own->
+ * the operator phone would configure .../DoorControl.php?id=<my-own->
  * 
  */
 
@@ -26,7 +26,7 @@ class DoorPhones {
      * 
      * @param string $doors name of file with door definitions
      * @param string $state name of file with state memory
-     * @param string $id if not null, h323id (i.e. "Name") of PBX uiser requesting the door cam picture
+     * @param string $id if not null, h323id (i.e. "Name") of PBX user requesting the door cam picture
      * @param string $device (optional) hardware device used for registration if not null
      */
     function __construct($doors, $state, $id = null, $device = null) {
@@ -116,7 +116,7 @@ class DoorPhones {
     }
 
     /**
-     * determine if i am called by a known door
+     * determine if I am called by a known door
      * @return string name of door that calls me (or null if not)
      */
     function calledByADoor($pbx, $returndoor = true, $switchapp = true) {
