@@ -1,5 +1,4 @@
 <?php
-
 /*
  * this script will provide door pictures from multiple door phones to operator phones
  * 
