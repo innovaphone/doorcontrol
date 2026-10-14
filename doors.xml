@@ -7,13 +7,13 @@
     interval="5"
     switch="true"
 >
-    <door name="door" url="http://wiki.innovaphone.com/images/innoWiki.png" proxy="true" proxy-resize="true" />
+    <door name="door" url="https://wiki.innovaphone.com/images/innoWiki.png" proxy="true" proxy-resize="true" />
 
     <!-- use proxy mode with auth -->
-    <!-- <door name="door_1" url="http://wiki.innovaphone.com/img_auth.php/6/6c/RecE111S2.png" content-type="image/png" proxy="true" user="user" pw="pw" /> -->
+    <!-- <door name="door_1" url="https://wiki.innovaphone.com/img_auth.php/6/6c/RecE111S2.png" content-type="image/png" proxy="true" user="user" pw="pw" /> -->
 
     <!-- use proxy mode with dynamic picture resize -->
-    <!-- <door name="door_2" url="http://wiki.innovaphone.com/img_auth.php/6/6c/RecE111S2.png" proxy="true" proxy-resize="true" /> -->
+    <!-- <door name="door_2" url="https://wiki.innovaphone.com/img_auth.php/6/6c/RecE111S2.png" proxy="true" proxy-resize="true" /> -->
 
     <!-- use proxy mode and skip ssl certificate check-->
     <!-- <door name="door_3" url="https://wiki.innovaphone.com/img_auth.php/6/6c/RecE111S2.png" proxy="true" proxy-skip-ssl-verify="true" /> -->

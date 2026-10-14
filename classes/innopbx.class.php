@@ -291,12 +291,12 @@ class innoPBX extends SoapClient {
     /**
      * the wsdl file
      * note that this file needs to be changed in order to use a different WSDL version 
-     * see http://wiki.innovaphone.com/index.php?title=Reference10:Concept_SOAP_API
+     * see https://wiki.innovaphone.com/index.php?title=Reference10:Concept_SOAP_API
      * please also note that PHP will retrieve this file upon each call to this classes constructor
      * see the PHP documentation for methods to provide a local wsdl file instead to speed this up
      */
-    const ___wsdl8 = 'http://www.innovaphone.com/wsdl/pbx800.wsdl';
-    const ___wsdl10 = 'http://www.innovaphone.com/wsdl/pbx10_00.wsdl';
+    const ___wsdl8 = 'https://www.innovaphone.com/wsdl/pbx800.wsdl';
+    const ___wsdl10 = 'https://www.innovaphone.com/wsdl/pbx10_00.wsdl';
 
     /**
      * class constructor

@@ -522,7 +522,7 @@ if (!empty($_GET['switchapp'])) {
     }
     print "
         <?xml version=\"1.0\" encoding=\"utf-8\"?>
-        <voicemail xmlns=\"http://www.innovaphone.com/xsd/vm.xsd\">
+        <voicemail xmlns=\"https://www.innovaphone.com/xsd/vm.xsd\">
             <function define=\"Main\">
                 <dbg string=\"switchops.xml: " . htmlentities($scriptresult) . "\"/>
             </function>
